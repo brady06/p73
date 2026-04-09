@@ -1,3 +1,6 @@
+/**
+ * Local development API only. Production deploys use Netlify: netlify/functions/bias-score.ts
+ */
 import { config as loadEnv } from 'dotenv';
 import { existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';

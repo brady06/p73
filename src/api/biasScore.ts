@@ -1,11 +1,15 @@
 /**
- * Calls your backend bias-score endpoint (never calls OpenAI from the browser).
- * Replace or extend this module when the analysis pipeline grows.
+ * Calls the bias-score API (Netlify Function in production: /.netlify/functions/bias-score).
+ * Never calls OpenAI from the browser.
+ *
+ * Optional VITE_API_BASE_URL: set only if the API is on another origin (include protocol, no trailing slash).
  */
 
-function apiUrl(path: string): string {
+const BIAS_SCORE_PATH = '/.netlify/functions/bias-score';
+
+function biasScoreUrl(): string {
   const base = import.meta.env.VITE_API_BASE_URL?.replace(/\/$/, '') ?? '';
-  return `${base}${path}`;
+  return `${base}${BIAS_SCORE_PATH}`;
 }
 
 export type BiasScoreErrorBody = {
@@ -15,8 +19,9 @@ export type BiasScoreErrorBody = {
 const LOG = '[analyze]';
 
 export async function requestBiasScore(text: string): Promise<number> {
-  console.log(`${LOG} POST /api/bias-score (chars=${text.length})`);
-  const res = await fetch(apiUrl('/api/bias-score'), {
+  const url = biasScoreUrl();
+  console.log(`${LOG} POST ${url} (chars=${text.length})`);
+  const res = await fetch(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
