@@ -111,4 +111,4 @@ src/
 
 ## License
 
-MIT (or your choice).
+MIT
