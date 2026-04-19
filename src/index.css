@@ -1,4 +1,4 @@
-/* Cognitive Bias Detector – dark blue theme */
+/* Bias Detector – dark blue theme */
 :root {
   --cbd-primary: #38bdf8;
   --cbd-primary-hover: #7dd3fc;
@@ -237,6 +237,37 @@ a.card-cbd:hover {
     opacity: 1;
     transform: none;
   }
+}
+
+/* Bias Score page — explanatory notes */
+.cbd-bias-notes-list {
+  padding-left: 0;
+}
+
+.cbd-bias-notes-item {
+  padding: 0.85rem 0;
+  border-bottom: 1px solid var(--cbd-border);
+  color: var(--cbd-text);
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.cbd-bias-notes-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0.25rem;
+}
+
+.cbd-bias-notes-bullet {
+  color: var(--cbd-primary);
+  font-weight: 700;
+  margin-right: 0.5rem;
+  user-select: none;
+}
+
+/* Neutral Position — rewrite panel */
+.cbd-neutral-rewrite {
+  background: var(--cbd-bg-subtle);
+  border-color: var(--cbd-border) !important;
 }
 
 /* Next steps: large page-name buttons */

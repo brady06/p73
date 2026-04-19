@@ -8,8 +8,12 @@ import { fileURLToPath } from 'node:url';
 import cors from 'cors';
 import express from 'express';
 import OpenAI from 'openai';
-import { BIAS_SCORE_SYSTEM_PROMPT, biasScoreUserMessage } from './openaiPrompt.js';
-import { parseScoreFromModelContent } from './parseScore.js';
+import {
+  ANALYSIS_MAX_COMPLETION_TOKENS,
+  ANALYSIS_SYSTEM_PROMPT,
+  analysisUserMessage,
+  parseAnalysisModelJson,
+} from './analysisModel.js';
 
 const serverDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(serverDir, '..');
@@ -40,7 +44,6 @@ const MAX_BODY_TEXT_CHARS = 32_000;
  */
 const MAX_MODEL_INPUT_CHARS = 8_000;
 
-const MAX_COMPLETION_TOKENS = 8;
 const OPENAI_TIMEOUT_MS = 45_000;
 const PORT = Number(process.env.PORT) || 8787;
 
@@ -119,15 +122,16 @@ app.post('/api/bias-score', async (req, res) => {
 
   try {
     const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
-    console.log(`${LOG} ${reqId} calling OpenAI model=${model} max_completion_tokens=${MAX_COMPLETION_TOKENS}`);
+    console.log(`${LOG} ${reqId} calling OpenAI model=${model} max_completion_tokens=${ANALYSIS_MAX_COMPLETION_TOKENS}`);
 
     const completion = await openai.chat.completions.create({
       model,
-      temperature: 0,
-      max_completion_tokens: MAX_COMPLETION_TOKENS,
+      temperature: 0.2,
+      max_completion_tokens: ANALYSIS_MAX_COMPLETION_TOKENS,
+      response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: BIAS_SCORE_SYSTEM_PROMPT },
-        { role: 'user', content: biasScoreUserMessage(modelInput) },
+        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+        { role: 'user', content: analysisUserMessage(modelInput) },
       ],
     });
 
@@ -146,18 +150,19 @@ app.post('/api/bias-score', async (req, res) => {
       return;
     }
 
-    const rawPreview = content.length > 120 ? `${content.slice(0, 120)}…` : content;
+    const rawPreview = content.length > 200 ? `${content.slice(0, 200)}…` : content;
     console.log(`${LOG} ${reqId} raw model output: ${JSON.stringify(rawPreview)}`);
 
-    const parsed = parseScoreFromModelContent(content);
+    const parsed = parseAnalysisModelJson(content);
     if (!parsed.ok) {
       console.error(`${LOG} ${reqId} parse failed: ${parsed.message}`);
-      res.status(502).json({ error: 'Could not parse a valid score from the model.' });
+      res.status(502).json({ error: 'Could not parse analysis from the model.' });
       return;
     }
 
-    console.log(`${LOG} ${reqId} parsed score=${parsed.score} (sending JSON to client)`);
-    res.json({ score: parsed.score });
+    const { score, notes, neutralPosition } = parsed.data;
+    console.log(`${LOG} ${reqId} parsed score=${score}, notes=${notes.length} (sending JSON to client)`);
+    res.json({ score, notes, neutralPosition });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'OpenAI request failed';
     console.error(`${LOG} ${reqId} exception:`, message);
@@ -172,6 +177,6 @@ app.listen(PORT, () => {
     `${LOG} OPENAI_API_KEY: ${keyLen > 0 ? `loaded (${keyLen} characters)` : 'MISSING — add OPENAI_API_KEY to .env in project root (same folder as package.json) and restart the API'}`,
   );
   console.log(
-    `${LOG} limits: max_body_chars=${MAX_BODY_TEXT_CHARS}, max_model_input_chars=${MAX_MODEL_INPUT_CHARS}, max_completion_tokens=${MAX_COMPLETION_TOKENS}, openai_timeout_ms=${OPENAI_TIMEOUT_MS}`,
+    `${LOG} limits: max_body_chars=${MAX_BODY_TEXT_CHARS}, max_model_input_chars=${MAX_MODEL_INPUT_CHARS}, max_completion_tokens=${ANALYSIS_MAX_COMPLETION_TOKENS}, openai_timeout_ms=${OPENAI_TIMEOUT_MS}`,
   );
 });

@@ -1,8 +1,8 @@
 /**
- * Calls the bias-score API (Netlify Function in production: /.netlify/functions/bias-score).
+ * Calls the bias analysis API (Netlify Function: /.netlify/functions/bias-score).
  * Never calls OpenAI from the browser.
  *
- * Optional VITE_API_BASE_URL: set only if the API is on another origin (include protocol, no trailing slash).
+ * Optional VITE_API_BASE_URL: set only if the API is on another origin (no trailing slash).
  */
 
 const BIAS_SCORE_PATH = '/.netlify/functions/bias-score';
@@ -16,9 +16,47 @@ export type BiasScoreErrorBody = {
   error?: string;
 };
 
+/** Response shape from the Netlify function / local Express API. */
+export type BiasAnalysisResponse = {
+  score: number;
+  notes: string[];
+  neutralPosition: string;
+};
+
 const LOG = '[analyze]';
 
-export async function requestBiasScore(text: string): Promise<number> {
+function normalizeAnalysis(data: unknown): BiasAnalysisResponse {
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid response from server.');
+  }
+  const o = data as Record<string, unknown>;
+
+  const scoreRaw = o.score;
+  let score = 0;
+  if (typeof scoreRaw === 'number' && Number.isFinite(scoreRaw)) {
+    score = Math.round(scoreRaw);
+  } else {
+    throw new Error('Invalid score in response.');
+  }
+  score = Math.min(100, Math.max(0, score));
+
+  let notes: string[] = [];
+  if (Array.isArray(o.notes)) {
+    notes = o.notes
+      .filter((n): n is string => typeof n === 'string')
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .slice(0, 12);
+  }
+
+  const neutralRaw = o.neutralPosition;
+  const neutralPosition =
+    typeof neutralRaw === 'string' ? neutralRaw.trim() : typeof o.neutral_position === 'string' ? o.neutral_position.trim() : '';
+
+  return { score, notes, neutralPosition };
+}
+
+export async function requestBiasAnalysis(text: string): Promise<BiasAnalysisResponse> {
   const url = biasScoreUrl();
   console.log(`${LOG} POST ${url} (chars=${text.length})`);
   const res = await fetch(url, {
@@ -27,7 +65,7 @@ export async function requestBiasScore(text: string): Promise<number> {
     body: JSON.stringify({ text }),
   });
 
-  const data: unknown = await res.json().catch(() => (null));
+  const data: unknown = await res.json().catch(() => null);
 
   if (!res.ok) {
     const message =
@@ -41,18 +79,7 @@ export async function requestBiasScore(text: string): Promise<number> {
     throw new Error(message);
   }
 
-  if (!data || typeof data !== 'object' || !('score' in data)) {
-    console.warn(`${LOG} invalid JSON body`);
-    throw new Error('Invalid response from server.');
-  }
-
-  const score = (data as { score: unknown }).score;
-  if (typeof score !== 'number' || !Number.isFinite(score)) {
-    console.warn(`${LOG} invalid score field`);
-    throw new Error('Invalid score in response.');
-  }
-
-  const normalized = Math.min(100, Math.max(0, Math.round(score)));
-  console.log(`${LOG} parsed score=${normalized}`);
+  const normalized = normalizeAnalysis(data);
+  console.log(`${LOG} analysis OK score=${normalized.score}, notes=${normalized.notes.length}`);
   return normalized;
 }

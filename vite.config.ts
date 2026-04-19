@@ -10,5 +10,15 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     base,
+    server: {
+      // Local dev: browser calls /.netlify/functions/... like production; forward to Express.
+      proxy: {
+        '/.netlify/functions/bias-score': {
+          target: 'http://127.0.0.1:8787',
+          changeOrigin: true,
+          rewrite: () => '/api/bias-score',
+        },
+      },
+    },
   };
 });

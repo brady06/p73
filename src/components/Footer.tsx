@@ -5,7 +5,7 @@ export default function Footer() {
     <footer className="py-4 mt-auto border-top cbd-footer">
       <Container>
         <p className="mb-0 text-muted small">
-          Cognitive Bias Detector — Analyze framing. Understand bias.
+          Bias Detector — Analyze framing. Understand bias.
         </p>
       </Container>
     </footer>

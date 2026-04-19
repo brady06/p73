@@ -1,49 +1,20 @@
 /**
- * Netlify Function: cognitive bias score (0–100). Keep prompts/parser aligned with server/openaiPrompt.ts and server/parseScore.ts if you change them.
+ * Netlify Function: full bias analysis (score, notes, neutral rewrite).
+ * Shared prompt/parser: server/analysisModel.ts
  */
 import type { Handler } from '@netlify/functions';
 import OpenAI from 'openai';
+import {
+  ANALYSIS_MAX_COMPLETION_TOKENS,
+  ANALYSIS_SYSTEM_PROMPT,
+  analysisUserMessage,
+  parseAnalysisModelJson,
+} from '../../server/analysisModel';
 
 const LOG = '[bias-score-fn]';
 
-const BIAS_SCORE_SYSTEM_PROMPT = `You are an objective evaluator of cognitive bias in text.
-
-Score ONLY bias observable in the wording, framing, reasoning, or presentation. Do not apply ideology, moralizing, or political assumptions. Having an opinion is not bias by itself.
-
-Use 0 if the text is gibberish, nonsense, random characters, purely mathematical/technical with no rhetorical bias, or not meaningfully evaluable for cognitive bias.
-
-Output rules (mandatory):
-- Output only a single integer from 0 to 100.
-- No other characters: no words, no JSON, no punctuation, no explanation, no line breaks, no spaces.`;
-
-function biasScoreUserMessage(text: string): string {
-  return `Score the cognitive bias severity of the following text (0–100). Output only the integer.\n\n${text}`;
-}
-
-type ParsedScore = { ok: true; score: number } | { ok: false; message: string };
-
-function parseScoreFromModelContent(raw: string): ParsedScore {
-  const trimmed = raw.trim();
-  if (!trimmed) {
-    return { ok: false, message: 'Empty model response' };
-  }
-  if (/```|json|\{|}/i.test(trimmed)) {
-    return { ok: false, message: 'Model returned non-numeric content (markers detected)' };
-  }
-  if (!/^\d+$/.test(trimmed)) {
-    return { ok: false, message: `Expected only digits 0-100, got: ${JSON.stringify(trimmed.slice(0, 80))}` };
-  }
-  const value = Number.parseInt(trimmed, 10);
-  if (!Number.isFinite(value)) {
-    return { ok: false, message: 'Could not parse integer' };
-  }
-  const clamped = Math.min(100, Math.max(0, value));
-  return { ok: true, score: clamped };
-}
-
 const MAX_BODY_TEXT_CHARS = 32_000;
 const MAX_MODEL_INPUT_CHARS = 8_000;
-const MAX_COMPLETION_TOKENS = 8;
 const OPENAI_TIMEOUT_MS = 45_000;
 
 const corsHeaders = {
@@ -87,7 +58,7 @@ export const handler: Handler = async (event) => {
 
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) {
-    console.error(`${LOG} ${reqId} missing OPENAI_API_KEY (set in Netlify: Site configuration → Environment variables)`);
+    console.error(`${LOG} ${reqId} missing OPENAI_API_KEY (Netlify → Environment variables)`);
     return json(500, { error: 'Server is not configured with OPENAI_API_KEY.' });
   }
 
@@ -133,11 +104,12 @@ export const handler: Handler = async (event) => {
 
     const completion = await openai.chat.completions.create({
       model,
-      temperature: 0,
-      max_completion_tokens: MAX_COMPLETION_TOKENS,
+      temperature: 0.2,
+      max_completion_tokens: ANALYSIS_MAX_COMPLETION_TOKENS,
+      response_format: { type: 'json_object' },
       messages: [
-        { role: 'system', content: BIAS_SCORE_SYSTEM_PROMPT },
-        { role: 'user', content: biasScoreUserMessage(modelInput) },
+        { role: 'system', content: ANALYSIS_SYSTEM_PROMPT },
+        { role: 'user', content: analysisUserMessage(modelInput) },
       ],
     });
 
@@ -149,16 +121,17 @@ export const handler: Handler = async (event) => {
       return json(502, { error: 'No response from the model.' });
     }
 
-    console.log(`${LOG} ${reqId} raw output (preview):`, JSON.stringify(content.slice(0, 80)));
+    console.log(`${LOG} ${reqId} raw output (preview):`, JSON.stringify(content.slice(0, 200)));
 
-    const parsed = parseScoreFromModelContent(content);
+    const parsed = parseAnalysisModelJson(content);
     if (!parsed.ok) {
       console.error(`${LOG} ${reqId} parse failed:`, parsed.message);
-      return json(502, { error: 'Could not parse a valid score from the model.' });
+      return json(502, { error: 'Could not parse analysis from the model.' });
     }
 
-    console.log(`${LOG} ${reqId} parsed score=${parsed.score}`);
-    return json(200, { score: parsed.score });
+    const { score, notes, neutralPosition } = parsed.data;
+    console.log(`${LOG} ${reqId} parsed score=${score}, notes count=${notes.length}`);
+    return json(200, { score, notes, neutralPosition });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'OpenAI request failed';
     console.error(`${LOG} ${reqId} exception:`, message);

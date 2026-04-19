@@ -12,7 +12,7 @@ export default function AppNavbar() {
     <Navbar className="navbar-cbd" expand="md" collapseOnSelect>
       <Container>
         <Navbar.Brand as={NavLink} to="/" className="fw-semibold">
-          Cognitive Bias Detector
+          Bias Detector
         </Navbar.Brand>
         <Navbar.Toggle aria-label="Toggle navigation" />
         <Navbar.Collapse>
