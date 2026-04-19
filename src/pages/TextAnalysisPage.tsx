@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Alert, Form, Row, Col } from 'react-bootstrap';
-import { requestBiasScore } from '../api/biasScore';
+import { requestBiasAnalysis } from '../api/biasScore';
 import AnalyzeTextButton from '../components/AnalyzeTextButton';
 import { useBiasAnalysis } from '../context/BiasAnalysisContext';
 import SectionWrapper from '../components/SectionWrapper';
@@ -18,6 +18,9 @@ export default function TextAnalysisPage() {
     analysisError,
     setAnalysisError,
     setBiasScore,
+    setBiasNotes,
+    setNeutralPosition,
+    clearAnalysisResults,
   } = useBiasAnalysis();
 
   const [emptySubmitHint, setEmptySubmitHint] = useState(false);
@@ -26,6 +29,7 @@ export default function TextAnalysisPage() {
     setAnalysisText(value);
     if (analysisStatus === 'success' || analysisStatus === 'error') {
       setAnalysisStatus('idle');
+      clearAnalysisResults();
     }
     if (emptySubmitHint) {
       setEmptySubmitHint(false);
@@ -49,13 +53,16 @@ export default function TextAnalysisPage() {
 
     setEmptySubmitHint(false);
     setAnalysisError(null);
+    clearAnalysisResults();
     setAnalysisStatus('loading');
     console.log(`${LOG} button clicked, starting request`);
 
     try {
-      const score = await requestBiasScore(text.trim());
-      console.log(`${LOG} response OK, score=${score}, storing in context`);
-      setBiasScore(score);
+      const result = await requestBiasAnalysis(text.trim());
+      console.log(`${LOG} response OK, score=${result.score}, storing in context`);
+      setBiasScore(result.score);
+      setBiasNotes(result.notes);
+      setNeutralPosition(result.neutralPosition);
       setAnalysisStatus('success');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Something went wrong. Please try again.';
@@ -69,15 +76,17 @@ export default function TextAnalysisPage() {
     <>
       <SectionWrapper className="bg-winter-subtle">
         <Hero
-          title="Cognitive Bias Detector"
-          subtitle="Paste text below to analyze its framing and see how bias and neutral rewrites can help you read with clarity."
+          title="Bias Detector"
+          subtitle="Paste text below to analyze its framing. See a bias score, short notes on what stands out, and a neutral rewrite to compare against the original."
         />
       </SectionWrapper>
 
       <SectionWrapper>
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {analysisStatus === 'loading' ? 'Analyzing text. Please wait.' : null}
-          {analysisStatus === 'success' ? 'Analysis complete. Bias score is ready on the Bias Score page.' : null}
+          {analysisStatus === 'success'
+            ? 'Analysis complete. Bias score, notes, and neutral rewrite are ready.'
+            : null}
           {analysisError ? `Analysis failed. ${analysisError}` : null}
         </div>
         <Form>

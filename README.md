@@ -1,14 +1,14 @@
-# Cognitive Bias Detector
+# Bias Detector
 
-A frontend-only skeleton for a “Cognitive Bias Detector” site: text analysis, bias score, and neutral position placeholders. Built with React, TypeScript, React Router, and React Bootstrap.
+React + TypeScript app that analyzes pasted text for biased framing: a **bias score** (0–100), short **explanatory notes**, and a **neutral rewrite** for comparison. Built with Vite, React Router, React Bootstrap, and a **Netlify Function** (or optional local Express) calling OpenAI—no secrets in the frontend.
 
 ## What’s included
 
-- **Text Analysis** (home): hero, textarea, “Analyze Text” button, and CTAs to Bias Score and Neutral Position.
-- **Bias Score**: semicircle gauge and score display.
-- **Neutral Position**: placeholder for a neutral rewrite.
+- **Text Analysis** (home): hero, textarea, “Analyze Text” flow, and CTAs after a successful run.
+- **Bias Score**: animated gauge, score, and “why this may be biased” notes.
+- **Neutral Position**: displays the generated neutral rewrite when available.
 
-No backend, API calls, auth, or persistence — UI only, ready to extend.
+Shared UI state persists across routes until the user edits the source text again.
 
 ## Tech stack
 
@@ -36,7 +36,7 @@ Your app uses **HashRouter**, so routes work on GitHub Pages without any server 
 ### Option A: Deploy with GitHub Actions (recommended)
 
 1. **Push your code to GitHub**  
-   Create a repo (e.g. `Web-Project` or `cognitive-bias-detector`) and push this project.
+   Create a repo (e.g. `Web-Project` or `bias-detector`) and push this project.
 
 2. **Turn on GitHub Pages**  
    - Open the repo on GitHub → **Settings** → **Pages**.  
