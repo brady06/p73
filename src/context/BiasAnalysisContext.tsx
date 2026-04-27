@@ -15,6 +15,10 @@ export type BiasAnalysisContextValue = {
   setBiasScore: (score: number | null) => void;
   biasNotes: string[];
   setBiasNotes: (notes: string[]) => void;
+  biasedPhrases: { phrase: string; reason: string }[];
+  setBiasedPhrases: (phrases: { phrase: string; reason: string }[]) => void;
+  rewriteChanges: { from: string; to: string; whyBetter: string }[];
+  setRewriteChanges: (changes: { from: string; to: string; whyBetter: string }[]) => void;
   neutralPosition: string | null;
   setNeutralPosition: (text: string | null) => void;
   clearAnalysisResults: () => void;
@@ -28,11 +32,15 @@ export function BiasAnalysisProvider({ children }: { children: ReactNode }) {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [biasScore, setBiasScore] = useState<number | null>(null);
   const [biasNotes, setBiasNotes] = useState<string[]>([]);
+  const [biasedPhrases, setBiasedPhrases] = useState<{ phrase: string; reason: string }[]>([]);
+  const [rewriteChanges, setRewriteChanges] = useState<{ from: string; to: string; whyBetter: string }[]>([]);
   const [neutralPosition, setNeutralPosition] = useState<string | null>(null);
 
   const clearAnalysisResults = useCallback(() => {
     setBiasScore(null);
     setBiasNotes([]);
+    setBiasedPhrases([]);
+    setRewriteChanges([]);
     setNeutralPosition(null);
   }, []);
 
@@ -48,6 +56,10 @@ export function BiasAnalysisProvider({ children }: { children: ReactNode }) {
       setBiasScore,
       biasNotes,
       setBiasNotes,
+      biasedPhrases,
+      setBiasedPhrases,
+      rewriteChanges,
+      setRewriteChanges,
       neutralPosition,
       setNeutralPosition,
       clearAnalysisResults,
@@ -58,6 +70,8 @@ export function BiasAnalysisProvider({ children }: { children: ReactNode }) {
       analysisError,
       biasScore,
       biasNotes,
+      biasedPhrases,
+      rewriteChanges,
       neutralPosition,
       clearAnalysisResults,
     ],

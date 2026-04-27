@@ -19,6 +19,8 @@ export default function TextAnalysisPage() {
     setAnalysisError,
     setBiasScore,
     setBiasNotes,
+    setBiasedPhrases,
+    setRewriteChanges,
     setNeutralPosition,
     clearAnalysisResults,
   } = useBiasAnalysis();
@@ -62,6 +64,8 @@ export default function TextAnalysisPage() {
       console.log(`${LOG} response OK, score=${result.score}, storing in context`);
       setBiasScore(result.score);
       setBiasNotes(result.notes);
+      setBiasedPhrases(result.biasedPhrases);
+      setRewriteChanges(result.rewriteChanges);
       setNeutralPosition(result.neutralPosition);
       setAnalysisStatus('success');
     } catch (err) {

@@ -160,9 +160,9 @@ app.post('/api/bias-score', async (req, res) => {
       return;
     }
 
-    const { score, notes, neutralPosition } = parsed.data;
+    const { score, notes, biasedPhrases, rewriteChanges, neutralPosition } = parsed.data;
     console.log(`${LOG} ${reqId} parsed score=${score}, notes=${notes.length} (sending JSON to client)`);
-    res.json({ score, notes, neutralPosition });
+    res.json({ score, notes, biasedPhrases, rewriteChanges, neutralPosition });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'OpenAI request failed';
     console.error(`${LOG} ${reqId} exception:`, message);

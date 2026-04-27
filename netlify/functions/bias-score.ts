@@ -129,9 +129,9 @@ export const handler: Handler = async (event) => {
       return json(502, { error: 'Could not parse analysis from the model.' });
     }
 
-    const { score, notes, neutralPosition } = parsed.data;
+    const { score, notes, biasedPhrases, rewriteChanges, neutralPosition } = parsed.data;
     console.log(`${LOG} ${reqId} parsed score=${score}, notes count=${notes.length}`);
-    return json(200, { score, notes, neutralPosition });
+    return json(200, { score, notes, biasedPhrases, rewriteChanges, neutralPosition });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'OpenAI request failed';
     console.error(`${LOG} ${reqId} exception:`, message);

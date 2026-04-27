@@ -9,14 +9,24 @@ export const ANALYSIS_SYSTEM_PROMPT = `You are an objective analyst of bias in t
 
 Evaluate only bias observable in the text. Do not apply ideology, moralizing, or political assumptions. Do not punish mere opinions.
 
-If the text is gibberish, nonsense, random characters, purely mathematical/technical with no rhetorical bias, or not meaningfully evaluable: use score 0, notes as an empty array [], and neutralPosition as an empty string "".
+If the text is gibberish, nonsense, random characters, purely mathematical/technical with no rhetorical bias, or not meaningfully evaluable: use score 0, notes as an empty array [], biasedPhrases as an empty array [], rewriteChanges as an empty array [], and neutralPosition as an empty string "".
 
 Otherwise respond with a single JSON object ONLY (no markdown fences, no text before or after) with exactly these keys:
 - "score": integer 0–100 (bias severity; higher = stronger bias signals)
 - "notes": array of 2–6 short strings; each string one concise, user-friendly observation of observable bias (loaded language, one-sided framing, emotional manipulation, etc.). Keep each under ~120 characters. If score is 0, use [].
+- "biasedPhrases": array of 0–8 objects. Each object must have:
+  - "phrase": exact short quote copied from the input text (2–80 chars) that reflects biased framing
+  - "reason": short explanation (max ~100 chars) of why that phrase may be biased
+- "rewriteChanges": array of 0–8 objects describing key replacements in the neutral rewrite. Each object must have:
+  - "from": exact short quote copied from the original input text
+  - "to": exact short quote copied from neutralPosition (not from original text)
+  - "whyBetter": short explanation (max ~110 chars) of why "to" is a more neutral framing
 - "neutralPosition": one string: a balanced, factual, non-inflammatory rewrite that preserves the core topic and meaning while removing biased framing. Not robotic legalese. If score is 0 or rewrite not applicable, use "".
 
-Rules for neutralPosition: preserve core content; do not add new facts; do not preach; stay proportional in length to the input (not a huge essay).`;
+Rules for neutralPosition: preserve core content; do not add new facts; do not preach; stay proportional in length to the input (not a huge essay).
+Critical consistency rule for rewriteChanges:
+- Every "to" value must appear verbatim in neutralPosition as a contiguous substring.
+- If a candidate replacement cannot be quoted exactly from neutralPosition, omit that rewriteChanges entry.`;
 
 export function analysisUserMessage(text: string): string {
   return `Analyze the following text and output only the JSON object described in your instructions.\n\n---\n${text}\n---`;
@@ -25,6 +35,8 @@ export function analysisUserMessage(text: string): string {
 export type ParsedAnalysis = {
   score: number;
   notes: string[];
+  biasedPhrases: { phrase: string; reason: string }[];
+  rewriteChanges: { from: string; to: string; whyBetter: string }[];
   neutralPosition: string;
 };
 
@@ -69,6 +81,19 @@ export function parseAnalysisModelJson(raw: string): { ok: true; data: ParsedAna
       .slice(0, 8);
   }
 
+  let biasedPhrases: { phrase: string; reason: string }[] = [];
+  if (Array.isArray(o.biasedPhrases)) {
+    biasedPhrases = o.biasedPhrases
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      .map((item) => {
+        const phrase = typeof item.phrase === 'string' ? item.phrase.trim() : '';
+        const reason = typeof item.reason === 'string' ? item.reason.trim() : '';
+        return { phrase, reason };
+      })
+      .filter((item) => item.phrase.length >= 2)
+      .slice(0, 8);
+  }
+
   let neutralPosition = '';
   if (typeof o.neutralPosition === 'string') {
     neutralPosition = o.neutralPosition.trim();
@@ -76,5 +101,21 @@ export function parseAnalysisModelJson(raw: string): { ok: true; data: ParsedAna
     neutralPosition = o.neutral_position.trim();
   }
 
-  return { ok: true, data: { score, notes, neutralPosition } };
+  let rewriteChanges: { from: string; to: string; whyBetter: string }[] = [];
+  if (Array.isArray(o.rewriteChanges)) {
+    const lowerNeutral = neutralPosition.toLowerCase();
+    rewriteChanges = o.rewriteChanges
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      .map((item) => {
+        const from = typeof item.from === 'string' ? item.from.trim() : '';
+        const to = typeof item.to === 'string' ? item.to.trim() : '';
+        const whyBetter = typeof item.whyBetter === 'string' ? item.whyBetter.trim() : '';
+        return { from, to, whyBetter };
+      })
+      .filter((item) => item.from.length >= 2 && item.to.length >= 2)
+      .filter((item) => (item.to ? lowerNeutral.includes(item.to.toLowerCase()) : false))
+      .slice(0, 8);
+  }
+
+  return { ok: true, data: { score, notes, biasedPhrases, rewriteChanges, neutralPosition } };
 }

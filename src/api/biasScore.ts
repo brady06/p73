@@ -20,6 +20,8 @@ export type BiasScoreErrorBody = {
 export type BiasAnalysisResponse = {
   score: number;
   notes: string[];
+  biasedPhrases: { phrase: string; reason: string }[];
+  rewriteChanges: { from: string; to: string; whyBetter: string }[];
   neutralPosition: string;
 };
 
@@ -49,11 +51,36 @@ function normalizeAnalysis(data: unknown): BiasAnalysisResponse {
       .slice(0, 12);
   }
 
+  let biasedPhrases: { phrase: string; reason: string }[] = [];
+  if (Array.isArray(o.biasedPhrases)) {
+    biasedPhrases = o.biasedPhrases
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      .map((item) => ({
+        phrase: typeof item.phrase === 'string' ? item.phrase.trim() : '',
+        reason: typeof item.reason === 'string' ? item.reason.trim() : '',
+      }))
+      .filter((item) => item.phrase.length >= 2)
+      .slice(0, 8);
+  }
+
+  let rewriteChanges: { from: string; to: string; whyBetter: string }[] = [];
+  if (Array.isArray(o.rewriteChanges)) {
+    rewriteChanges = o.rewriteChanges
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === 'object' && !Array.isArray(item))
+      .map((item) => ({
+        from: typeof item.from === 'string' ? item.from.trim() : '',
+        to: typeof item.to === 'string' ? item.to.trim() : '',
+        whyBetter: typeof item.whyBetter === 'string' ? item.whyBetter.trim() : '',
+      }))
+      .filter((item) => item.from.length >= 2 && item.to.length >= 2)
+      .slice(0, 8);
+  }
+
   const neutralRaw = o.neutralPosition;
   const neutralPosition =
     typeof neutralRaw === 'string' ? neutralRaw.trim() : typeof o.neutral_position === 'string' ? o.neutral_position.trim() : '';
 
-  return { score, notes, neutralPosition };
+  return { score, notes, biasedPhrases, rewriteChanges, neutralPosition };
 }
 
 export async function requestBiasAnalysis(text: string): Promise<BiasAnalysisResponse> {
