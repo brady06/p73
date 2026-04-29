@@ -18,6 +18,11 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           rewrite: () => '/api/bias-score',
         },
+        '/.netlify/functions/bias-chat': {
+          target: 'http://127.0.0.1:8787',
+          changeOrigin: true,
+          rewrite: () => '/api/bias-chat',
+        },
       },
     },
   };

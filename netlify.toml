@@ -1,7 +1,7 @@
 # Build the Vite app; static files from dist. Functions live in netlify/functions/
 #
 # Required Netlify UI / dashboard environment variables (do not commit secrets):
-#   OPENAI_API_KEY  — required (bias analysis: score + notes + neutral rewrite)
+#   OPENAI_API_KEY  — required (bias analysis + scoped chat)
 #   OPENAI_MODEL    — optional; defaults to gpt-4o-mini in netlify/functions/bias-score.ts
 
 [build]

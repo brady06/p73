@@ -5,6 +5,7 @@ const navItems = [
   { to: '/', label: 'Text Analysis' },
   { to: '/bias-score', label: 'Bias Score' },
   { to: '/neutral-position', label: 'Neutral Position' },
+  { to: '/chat', label: 'Chat' },
   { to: '/about', label: 'About' },
 ] as const;
 

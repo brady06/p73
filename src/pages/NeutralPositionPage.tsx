@@ -9,6 +9,7 @@ import { useBiasAnalysis } from '../context/BiasAnalysisContext';
 const CTAS = [
   { to: '/', title: 'Text Analysis', description: 'Analyze new text' },
   { to: '/bias-score', title: 'Bias Score', description: 'View score' },
+  { to: '/chat', title: 'Chat', description: 'Discuss bias in your text' },
 ];
 
 type Highlight = { phrase: string; reason: string };

@@ -550,3 +550,22 @@ footer.cbd-footer .text-muted {
     transform: scale(1);
   }
 }
+
+/* Chat page */
+.cbd-chat-log {
+  background: var(--cbd-bg-subtle);
+  border-color: var(--cbd-border) !important;
+}
+
+.cbd-chat-bubble {
+  border: 1px solid var(--cbd-border);
+}
+
+.cbd-chat-bubble--user {
+  background: rgba(56, 189, 248, 0.12);
+  border-color: rgba(56, 189, 248, 0.35);
+}
+
+.cbd-chat-bubble--assistant {
+  background: var(--cbd-bg-card);
+}
