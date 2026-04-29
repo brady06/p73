@@ -14,6 +14,11 @@ import {
   analysisUserMessage,
   parseAnalysisModelJson,
 } from './analysisModel.js';
+import {
+  BIAS_CHAT_MAX_COMPLETION_TOKENS,
+  buildBiasChatSystemContent,
+  parseBiasChatBody,
+} from './biasChat.js';
 
 const serverDir = dirname(fileURLToPath(import.meta.url));
 const projectRoot = join(serverDir, '..');
@@ -166,6 +171,55 @@ app.post('/api/bias-score', async (req, res) => {
   } catch (err) {
     const message = err instanceof Error ? err.message : 'OpenAI request failed';
     console.error(`${LOG} ${reqId} exception:`, message);
+    res.status(502).json({ error: message });
+  }
+});
+
+const CHAT_LOG = '[bias-chat]';
+
+app.post('/api/bias-chat', async (req, res) => {
+  const reqId = globalThis.crypto?.randomUUID?.() ?? `req-${Date.now()}`;
+  console.log(`${CHAT_LOG} ${reqId} request received`);
+
+  const openai = getOpenAI();
+  if (!openai) {
+    console.error(`${CHAT_LOG} ${reqId} error: missing OPENAI_API_KEY`);
+    res.status(500).json({ error: 'Server is not configured with OPENAI_API_KEY.' });
+    return;
+  }
+
+  const parsed = parseBiasChatBody(req.body);
+  if (!parsed.ok) {
+    console.warn(`${CHAT_LOG} ${reqId} bad request: ${parsed.error}`);
+    res.status(parsed.status).json({ error: parsed.error });
+    return;
+  }
+
+  const { messages, context } = parsed;
+  const model = process.env.OPENAI_MODEL ?? 'gpt-4o-mini';
+  const systemContent = buildBiasChatSystemContent(context);
+
+  try {
+    console.log(`${CHAT_LOG} ${reqId} model=${model} messages=${messages.length}`);
+    const completion = await openai.chat.completions.create({
+      model,
+      temperature: 0.35,
+      max_completion_tokens: BIAS_CHAT_MAX_COMPLETION_TOKENS,
+      messages: [{ role: 'system', content: systemContent }, ...messages],
+    });
+
+    const reply = completion.choices[0]?.message?.content?.trim();
+    if (!reply) {
+      console.error(`${CHAT_LOG} ${reqId} empty assistant content`);
+      res.status(502).json({ error: 'No response from the model.' });
+      return;
+    }
+
+    console.log(`${CHAT_LOG} ${reqId} reply length=${reply.length}`);
+    res.json({ reply });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'OpenAI request failed';
+    console.error(`${CHAT_LOG} ${reqId} exception:`, message);
     res.status(502).json({ error: message });
   }
 });

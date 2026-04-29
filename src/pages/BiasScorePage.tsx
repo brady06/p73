@@ -7,6 +7,7 @@ import { useBiasAnalysis } from '../context/BiasAnalysisContext';
 
 const CTAS = [
   { to: '/', title: 'Text Analysis', description: 'Analyze new text' },
+  { to: '/chat', title: 'Chat', description: 'Discuss bias in your text' },
   { to: '/neutral-position', title: 'Neutral Position', description: 'View neutral rewrite' },
 ];
 

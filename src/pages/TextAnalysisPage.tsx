@@ -133,7 +133,7 @@ export default function TextAnalysisPage() {
             >
               After analyzing
             </h2>
-            <Row xs={1} md={2} className="g-4">
+            <Row xs={1} md={3} className="g-4">
               <Col className="after-analyze-reveal__col after-analyze-reveal__col--1">
                 <NextStepCta
                   to="/bias-score"
@@ -148,6 +148,14 @@ export default function TextAnalysisPage() {
                   title="Neutral Position"
                   description="Read a more neutral version of the same content."
                   variant="slate"
+                />
+              </Col>
+              <Col className="after-analyze-reveal__col after-analyze-reveal__col--3">
+                <NextStepCta
+                  to="/chat"
+                  title="Chat"
+                  description="Ask the assistant about bias in this text."
+                  variant="ice"
                 />
               </Col>
             </Row>
